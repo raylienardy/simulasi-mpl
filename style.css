@@ -34,7 +34,6 @@ body {
   min-width: 80px;
 }
 
-/* Klasemen status */
 .bg-upper {
   background-color: #28a745 !important;
   color: white;
@@ -48,75 +47,117 @@ body {
 }
 
 /* ========== PLAYOFF BRACKET ========== */
+#playoffContainer {
+  position: relative;
+  min-height: 400px;
+  overflow-x: auto;
+}
+
 .bracket-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: auto auto;
-  gap: 20px;
+  gap: 40px;
   justify-items: center;
   align-items: start;
   margin-top: 20px;
+  min-width: 1000px;
 }
 
 .bracket-round {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
+  gap: 25px;
   width: 100%;
+}
+
+.round-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: #1e293b;
+  padding: 6px 14px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .bracket-match {
-  background: #fff;
-  border: 2px solid #dee2e6;
-  border-radius: 10px;
-  padding: 12px 8px;
-  text-align: center;
-  min-width: 180px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  width: 220px; /* sedikit lebih kecil */
+  padding: 8px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s;
   position: relative;
 }
 
-.bracket-match .team {
+.bracket-match:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.bracket-match .team-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
-  font-weight: 500;
+  padding: 4px 6px;
+  border-radius: 6px;
+  margin-bottom: 4px;
 }
 
-.bracket-match .score {
-  background: #e9ecef;
-  border-radius: 12px;
-  padding: 0 6px;
-  font-size: 0.9rem;
-  font-weight: bold;
-}
-
-.bracket-match .winner-badge {
-  display: block;
-  margin-top: 6px;
-  font-weight: bold;
-  color: #198754;
+.bracket-match .team-name {
+  font-size: 0.85rem;
 }
 
 .bracket-match select {
-  margin-top: 8px;
-  width: 100%;
+  width: 55px; /* dropdown kecil */
+  font-size: 0.8rem;
+  padding: 2px 2px;
 }
 
-/* Garis konektor sederhana (opsional) */
-.connector-down {
-  width: 2px;
-  height: 30px;
-  background: #adb5bd;
-  margin: 0 auto;
+.bracket-match .team-row .team-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.connector-right {
+.bracket-match .team-row .score-badge {
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin: 0 8px;
+  min-width: 36px;
+  text-align: center;
+}
+
+.bracket-match .team-row select {
+  width: 70px;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+.winner-row {
+  background-color: #d4edda !important;
+}
+
+.loser-row {
+  background-color: #f8d7da !important;
+}
+
+.connector-svg {
   position: absolute;
-  top: 50%;
-  right: -20px;
-  width: 20px;
-  height: 2px;
-  background: #adb5bd;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
 }

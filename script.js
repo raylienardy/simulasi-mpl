@@ -11,20 +11,25 @@ let playoffMatches = [];
  **********************************************/
 document.addEventListener("DOMContentLoaded", () => {
   const saved = loadState();
-  if (saved && saved.teamNames && saved.schedule) {
+  if (saved) {
     teamNames = saved.teamNames;
-    schedule = saved.schedule;
+    schedule = Array.isArray(saved.schedule) ? saved.schedule : [];
     schedule.forEach((week) => {
       if (!week.days) week.days = [];
     });
     initTeams();
     showSimulationView();
     if (saved.playoff) playoffMatches = saved.playoff;
+    else playoffMatches = [];
     renderPlayoffBracket();
   } else {
     showSetupView();
   }
   document.getElementById("teamCount").dispatchEvent(new Event("input"));
+});
+
+window.addEventListener("beforeunload", () => {
+  saveState();
 });
 
 document.getElementById("teamCount").addEventListener("input", function () {
@@ -720,10 +725,9 @@ function renderCrossTable() {
 }
 
 /**********************************************
- * PLAYOFF BRACKET – VERSI AKURAT
+ * PLAYOFF BRACKET
  **********************************************/
 function generatePlayoffBracket() {
-  // Cek TBD
   let hasTBD = false;
   schedule.forEach((week) => {
     if (!week.days) return;
@@ -845,7 +849,6 @@ function updatePlayoffDependencies() {
   const ubsf1 = playoffMatches.find((m) => m.id === "ubsf1");
   const ubsf2 = playoffMatches.find((m) => m.id === "ubsf2");
 
-  // UB SF lawan dari play-ins (pemenang playins2 lawan seed1, pemenang playins1 lawan seed2)
   ubsf1.team2 = playins2.winner || null;
   ubsf2.team2 = playins1.winner || null;
 
@@ -853,7 +856,6 @@ function updatePlayoffDependencies() {
   ubfinal.team1 = ubsf1.winner || null;
   ubfinal.team2 = ubsf2.winner || null;
 
-  // LB SF: dua tim kalah dari UB SF
   const lbsf = playoffMatches.find((m) => m.id === "lbsf");
   lbsf.team1 = ubsf1.winner
     ? ubsf1.team1 === ubsf1.winner
@@ -892,80 +894,94 @@ function renderPlayoffBracket() {
 
   const html = `
     <div class="bracket-grid">
-        <!-- Play-ins -->
         <div class="bracket-round" style="grid-row:1; grid-column:1;">
-            <h6 class="text-center">Play‑ins (Bo5)</h6>
+            <div class="round-title">Play‑ins (Bo5)</div>
             ${matchBox(getMatch("playins1"))}
             ${matchBox(getMatch("playins2"))}
         </div>
-
-        <!-- UB SF -->
         <div class="bracket-round" style="grid-row:1; grid-column:2;">
-            <h6 class="text-center">UB Semifinal (Bo5)</h6>
-            ${matchBox(getMatch("ubsf1"))}
+            <div class="round-title">UB Semifinal (Bo5)</div>
             ${matchBox(getMatch("ubsf2"))}
+            ${matchBox(getMatch("ubsf1"))}
+        </div>
+        <div class="bracket-round" style="grid-row:1; grid-column:3;">
+            <div class="round-title">UB Final (Bo5)</div>
+            ${matchBox(getMatch("ubfinal"))}
+        </div>
+        <div class="bracket-round" style="grid-row:1; grid-column:4;">
+            <div class="round-title">Grand Final (Bo7)</div>
+            ${matchBox(getMatch("grandfinal"))}
         </div>
 
-        <!-- UB Final & LB SF (stacked) -->
-        <div class="bracket-round" style="grid-row:1; grid-column:3; display:flex; flex-direction:column; gap:30px;">
-            <div>
-                <h6 class="text-center">UB Final (Bo5)</h6>
-                ${matchBox(getMatch("ubfinal"))}
-            </div>
-            <div>
-                <h6 class="text-center">LB Semifinal (Bo5)</h6>
-                ${matchBox(getMatch("lbsf"))}
-            </div>
+        <div class="bracket-round" style="grid-row:2; grid-column:2;">
+            <div class="round-title">LB Semifinal (Bo5)</div>
+            ${matchBox(getMatch("lbsf"))}
         </div>
-
-        <!-- Grand Final & LB Final -->
-        <div class="bracket-round" style="grid-row:1; grid-column:4; display:flex; flex-direction:column; gap:30px;">
-            <div>
-                <h6 class="text-center">Grand Final (Bo7)</h6>
-                ${matchBox(getMatch("grandfinal"))}
-            </div>
-            <div>
-                <h6 class="text-center">LB Final (Bo7)</h6>
-                ${matchBox(getMatch("lbfinal"))}
-            </div>
+        <div class="bracket-round" style="grid-row:2; grid-column:3;">
+            <div class="round-title">LB Final (Bo7)</div>
+            ${matchBox(getMatch("lbfinal"))}
         </div>
     </div>`;
 
   container.innerHTML = html;
 
-  // Event listener untuk dropdown skor
-  document.querySelectorAll(".playoff-score").forEach((select) => {
+  document.querySelectorAll(".playoff-score-team").forEach((select) => {
     select.addEventListener("change", handlePlayoffScoreChange);
+  });
+
+  // Tunggu layout selesai sebelum menggambar garis
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      drawConnectors();
+    });
   });
 }
 
 function matchBox(match) {
   const team1 = match.team1 || "TBD";
   const team2 = match.team2 || "TBD";
-  let options = "";
+  const bo = match.bo;
+  const maxWins = Math.ceil(bo / 2);
+
+  let options1 = '<option value="">-</option>';
   if (team1 !== "TBD" && team2 !== "TBD") {
-    const bo = match.bo;
-    for (let i = 0; i <= bo; i++) {
-      for (let j = 0; j <= bo; j++) {
-        if (i === bo || j === bo) {
-          if (i === bo && j < bo)
-            options += `<option value="${team1} ${i}-${j}" ${match.score === `${i}-${j}` ? "selected" : ""}>${team1} ${i}-${j}</option>`;
-          if (j === bo && i < bo)
-            options += `<option value="${team2} ${i}-${j}" ${match.score === `${i}-${j}` ? "selected" : ""}>${team2} ${i}-${j}</option>`;
-        }
-      }
+    for (let s = 0; s <= maxWins; s++) {
+      options1 += `<option value="${team1}||${s}" ${match.score && match.score.split("-")[0] === String(s) ? "selected" : ""}>${s}</option>`;
     }
-    options = `<option value="">-- Pilih skor --</option>` + options;
-  } else {
-    options = '<option value="">-- TBD --</option>';
+  }
+  let options2 = '<option value="">-</option>';
+  if (team1 !== "TBD" && team2 !== "TBD") {
+    for (let s = 0; s <= maxWins; s++) {
+      options2 += `<option value="${team2}||${s}" ${match.score && match.score.split("-")[1] === String(s) ? "selected" : ""}>${s}</option>`;
+    }
+  }
+
+  let row1Class = "team-row",
+    row2Class = "team-row";
+  if (match.winner) {
+    if (team1 === match.winner) {
+      row1Class += " winner-row";
+      row2Class += " loser-row";
+    } else {
+      row1Class += " loser-row";
+      row2Class += " winner-row";
+    }
   }
 
   return `
-    <div class="bracket-match">
-        <div class="team"><span>${team1}</span> <span class="score">${match.score ? match.score.split("-")[0] : "0"}</span></div>
-        <div class="team"><span>${team2}</span> <span class="score">${match.score ? match.score.split("-")[1] : "0"}</span></div>
-        <select class="form-select form-select-sm playoff-score" data-id="${match.id}">${options}</select>
-        ${match.winner ? `<span class="winner-badge">🏆 ${match.winner}</span>` : ""}
+    <div class="bracket-match" id="match-${match.id}">
+        <div class="${row1Class}">
+            <span class="team-name">${team1}</span>
+            <select class="form-select form-select-sm playoff-score-team" data-id="${match.id}" data-team="${team1}">
+                ${options1}
+            </select>
+        </div>
+        <div class="${row2Class}">
+            <span class="team-name">${team2}</span>
+            <select class="form-select form-select-sm playoff-score-team" data-id="${match.id}" data-team="${team2}">
+                ${options2}
+            </select>
+        </div>
     </div>`;
 }
 
@@ -973,15 +989,60 @@ function handlePlayoffScoreChange(e) {
   const select = e.target;
   const id = select.dataset.id;
   const match = playoffMatches.find((m) => m.id === id);
-  const value = select.value;
+  const value = select.value; // format "Team||skor"
   if (!value) {
     match.score = "";
     match.winner = "";
   } else {
-    const [winner, score] = value.split(" ");
-    match.winner = winner;
-    match.score = score;
+    const [team, skor] = value.split("||");
+    const skorInt = parseInt(skor);
+    const bo = match.bo;
+    const maxWins = Math.ceil(bo / 2);
+
+    // Tentukan skor lawan
+    const isTeam1 = team === match.team1;
+    let skor1, skor2;
+    if (isTeam1) {
+      skor1 = skorInt;
+      // Cari skor2 yang mungkin
+      if (skor1 === maxWins) {
+        // Tim1 menang
+        skor2 = 0; // default
+        // Cari dari dropdown satunya jika ada
+        const otherSelect = document.querySelector(
+          `.playoff-score-team[data-id="${id}"][data-team="${match.team2}"]`,
+        );
+        if (otherSelect && otherSelect.value) {
+          const [, otherSkor] = otherSelect.value.split("||");
+          skor2 = parseInt(otherSkor);
+        }
+        // Pastikan skor2 < maxWins
+        if (skor2 >= maxWins) skor2 = maxWins - 1;
+      } else {
+        // Tim1 kalah -> tim2 pasti maxWins
+        skor2 = maxWins;
+      }
+    } else {
+      skor2 = skorInt;
+      if (skor2 === maxWins) {
+        skor1 = 0;
+        const otherSelect = document.querySelector(
+          `.playoff-score-team[data-id="${id}"][data-team="${match.team1}"]`,
+        );
+        if (otherSelect && otherSelect.value) {
+          const [, otherSkor] = otherSelect.value.split("||");
+          skor1 = parseInt(otherSkor);
+        }
+        if (skor1 >= maxWins) skor1 = maxWins - 1;
+      } else {
+        skor1 = maxWins;
+      }
+    }
+
+    match.score = `${skor1}-${skor2}`;
+    match.winner = skor1 > skor2 ? match.team1 : match.team2;
   }
+
   propagatePlayoff();
   saveState();
   renderPlayoffBracket();
@@ -989,8 +1050,98 @@ function handlePlayoffScoreChange(e) {
 
 function propagatePlayoff() {
   updatePlayoffDependencies();
-  // Cek apakah ada perubahan pemenang yang mempengaruhi match selanjutnya
-  // Re-render otomatis
+}
+
+function drawConnectors() {
+  const container = document.getElementById("playoffContainer");
+  if (!container) return;
+
+  let oldSvg = container.querySelector(".connector-svg");
+  if (oldSvg) oldSvg.remove();
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "connector-svg");
+  container.appendChild(svg);
+
+  const getRect = (id) => {
+    const el = document.getElementById(`match-${id}`);
+    return el ? el.getBoundingClientRect() : null;
+  };
+  const containerRect = container.getBoundingClientRect();
+
+  function addLine(x1, y1, x2, y2) {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x1 - containerRect.left);
+    line.setAttribute("y1", y1 - containerRect.top);
+    line.setAttribute("x2", x2 - containerRect.left);
+    line.setAttribute("y2", y2 - containerRect.top);
+    line.setAttribute("stroke", "#94a3b8");
+    line.setAttribute("stroke-width", "2");
+    line.setAttribute("stroke-linecap", "round");
+    svg.appendChild(line);
+  }
+
+  const p1 = getRect("playins1");
+  const p2 = getRect("playins2");
+  const ubsf2 = getRect("ubsf2"); // atas
+  const ubsf1 = getRect("ubsf1"); // bawah
+  const ubfinal = getRect("ubfinal");
+  const gf = getRect("grandfinal");
+  const lbsf = getRect("lbsf");
+  const lbfinal = getRect("lbfinal");
+
+  // 1. Play‑ins → UB SF
+  if (p1 && ubsf2)
+    addLine(
+      p1.right,
+      p1.top + p1.height / 2,
+      ubsf2.left,
+      ubsf2.top + ubsf2.height / 2,
+    );
+  if (p2 && ubsf1)
+    addLine(
+      p2.right,
+      p2.top + p2.height / 2,
+      ubsf1.left,
+      ubsf1.top + ubsf1.height / 2,
+    );
+
+  // 2. UB SF → UB Final
+  if (ubsf2 && ubsf1 && ubfinal) {
+    const xRight = ubsf2.right;
+    const yTop = ubsf2.top + ubsf2.height / 2;
+    const yBottom = ubsf1.top + ubsf1.height / 2;
+    addLine(xRight, yTop, xRight, yBottom); // vertikal
+    const yMid = (yTop + yBottom) / 2;
+    addLine(xRight, yMid, ubfinal.left, yMid); // horizontal ke kiri UB Final
+  }
+
+  // 3. UB Final → Grand Final
+  if (ubfinal && gf)
+    addLine(
+      ubfinal.right,
+      ubfinal.top + ubfinal.height / 2,
+      gf.left,
+      gf.top + gf.height / 2,
+    );
+
+  // 4. LB SF → LB Final
+  if (lbsf && lbfinal)
+    addLine(
+      lbsf.right,
+      lbsf.top + lbsf.height / 2,
+      lbfinal.left,
+      lbfinal.top + lbfinal.height / 2,
+    );
+
+  // 5. LB Final → Grand Final (L shape)
+  if (lbfinal && gf) {
+    const yGf = gf.top + gf.height / 2;
+    const xLb = lbfinal.right;
+    const yLb = lbfinal.top + lbfinal.height / 2;
+    addLine(xLb, yLb, xLb, yGf);
+    addLine(xLb, yGf, gf.left, yGf);
+  }
 }
 
 /**********************************************
@@ -1000,17 +1151,25 @@ function saveState() {
   const state = { teamNames, schedule, playoff: playoffMatches };
   localStorage.setItem("mpl_simulation", JSON.stringify(state));
 }
+
 function loadState() {
   const raw = localStorage.getItem("mpl_simulation");
   if (!raw) return null;
   try {
     const data = JSON.parse(raw);
-    if (!data.teamNames || !Array.isArray(data.schedule)) return null;
+    if (!data.teamNames || !Array.isArray(data.schedule)) {
+      console.warn("Data tidak valid, dihapus.");
+      localStorage.removeItem("mpl_simulation");
+      return null;
+    }
     return data;
   } catch (e) {
+    console.error("Gagal parse data:", e);
+    localStorage.removeItem("mpl_simulation");
     return null;
   }
 }
+
 function clearState() {
   localStorage.removeItem("mpl_simulation");
 }
@@ -1021,12 +1180,14 @@ function resetData() {
     location.reload();
   }
 }
+
 function backToSetup() {
   if (confirm("Kembali ke setup? Data akan hilang.")) {
     clearState();
     location.reload();
   }
 }
+
 function exportData() {
   const state = { teamNames, schedule, playoff: playoffMatches };
   const blob = new Blob([JSON.stringify(state, null, 2)], {
@@ -1038,6 +1199,7 @@ function exportData() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
+
 function importData(input) {
   const file = input.files[0];
   if (!file) return;
@@ -1062,4 +1224,100 @@ function importData(input) {
     }
   };
   reader.readAsText(file);
+}
+
+function drawConnectors() {
+  const container = document.getElementById("playoffContainer");
+  if (!container) return;
+
+  let oldSvg = container.querySelector(".connector-svg");
+  if (oldSvg) oldSvg.remove();
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "connector-svg");
+  container.appendChild(svg);
+
+  const getRect = (id) => {
+    const el = document.getElementById(`match-${id}`);
+    return el ? el.getBoundingClientRect() : null;
+  };
+  const containerRect = container.getBoundingClientRect();
+
+  function addLine(x1, y1, x2, y2) {
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", x1 - containerRect.left);
+    line.setAttribute("y1", y1 - containerRect.top);
+    line.setAttribute("x2", x2 - containerRect.left);
+    line.setAttribute("y2", y2 - containerRect.top);
+    line.setAttribute("stroke", "#cbd5e1");
+    line.setAttribute("stroke-width", "2");
+    line.setAttribute("stroke-linecap", "round");
+    svg.appendChild(line);
+  }
+
+  // Play-ins → UB Semifinal
+  const p1 = getRect("playins1");
+  const p2 = getRect("playins2");
+  const ubsf2 = getRect("ubsf2");
+  const ubsf1 = getRect("ubsf1");
+
+  if (p1 && ubsf2) {
+    addLine(
+      p1.right,
+      p1.top + p1.height / 2,
+      ubsf2.left,
+      ubsf2.top + ubsf2.height / 2,
+    );
+  }
+  if (p2 && ubsf1) {
+    addLine(
+      p2.right,
+      p2.top + p2.height / 2,
+      ubsf1.left,
+      ubsf1.top + ubsf1.height / 2,
+    );
+  }
+
+  // UB Semifinal → UB Final
+  const ubfinal = getRect("ubfinal");
+  if (ubsf2 && ubsf1 && ubfinal) {
+    const xRight = ubsf2.right;
+    const yTop = ubsf2.top + ubsf2.height / 2;
+    const yBottom = ubsf1.top + ubsf1.height / 2;
+    const yMid = (yTop + yBottom) / 2;
+    addLine(xRight, yTop, xRight, yBottom); // vertikal
+    addLine(xRight, yMid, ubfinal.left, yMid); // horizontal
+  }
+
+  // UB Final → Grand Final
+  const gf = getRect("grandfinal");
+  if (ubfinal && gf) {
+    addLine(
+      ubfinal.right,
+      ubfinal.top + ubfinal.height / 2,
+      gf.left,
+      gf.top + gf.height / 2,
+    );
+  }
+
+  // LB Semifinal → LB Final
+  const lbsf = getRect("lbsf");
+  const lbfinal = getRect("lbfinal");
+  if (lbsf && lbfinal) {
+    addLine(
+      lbsf.right,
+      lbsf.top + lbsf.height / 2,
+      lbfinal.left,
+      lbfinal.top + lbfinal.height / 2,
+    );
+  }
+
+  // LB Final → Grand Final (L shape)
+  if (lbfinal && gf) {
+    const yGf = gf.top + gf.height / 2;
+    const xLb = lbfinal.right;
+    const yLb = lbfinal.top + lbfinal.height / 2;
+    addLine(xLb, yLb, xLb, yGf);
+    addLine(xLb, yGf, gf.left, yGf);
+  }
 }
