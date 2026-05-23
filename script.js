@@ -928,13 +928,6 @@ function renderPlayoffBracket() {
   document.querySelectorAll(".playoff-score-team").forEach((select) => {
     select.addEventListener("change", handlePlayoffScoreChange);
   });
-
-  // Tunggu layout selesai sebelum menggambar garis
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      drawConnectors();
-    });
-  });
 }
 
 function matchBox(match) {

@@ -152,7 +152,7 @@ body {
   background-color: #f8d7da !important;
 }
 
-.connector-svg {
+/* .connector-svg {
   position: absolute;
   top: 0;
   left: 0;
@@ -160,4 +160,4 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 10;
-}
+} */
