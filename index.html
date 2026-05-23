@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulasi MPL – Regular Season + Playoff</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container py-4">
+      <h1 class="text-center mb-4">
+        🏆 Simulasi MPL (Regular Season → Playoff)
+      </h1>
+
+      <!-- Setup -->
+      <div id="setup-section">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">1. Setup Tim</h5>
+            <div class="mb-3">
+              <label for="teamCount" class="form-label"
+                >Jumlah Tim (2–20)</label
+              >
+              <input
+                type="number"
+                id="teamCount"
+                class="form-control"
+                min="2"
+                max="20"
+                value="4"
+                required
+              />
+            </div>
+            <div id="teamNamesContainer"></div>
+            <button
+              class="btn btn-primary w-100 mt-3"
+              onclick="startSimulation()"
+            >
+              Mulai Simulasi
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulasi -->
+      <div id="simulation-section" class="hidden">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2>Jadwal &amp; Klasemen</h2>
+          <div>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              onclick="exportData()"
+            >
+              📤 Ekspor
+            </button>
+            <label class="btn btn-outline-secondary btn-sm m-0 ms-1">
+              📥 Impor
+              <input
+                type="file"
+                id="importFile"
+                accept=".json"
+                hidden
+                onchange="importData(this)"
+              />
+            </label>
+            <button
+              class="btn btn-outline-danger btn-sm ms-1"
+              onclick="resetData()"
+            >
+              🔄 Reset
+            </button>
+          </div>
+        </div>
+
+        <div id="scheduleContainer" class="mb-4"></div>
+        <div class="mb-3">
+          <button class="btn btn-success" onclick="addWeek()">
+            ➕ Tambah Week
+          </button>
+        </div>
+
+        <!-- Cross Table -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            <h5 class="card-title">Cross Table (Head‑to‑Head)</h5>
+            <div id="crossTableContainer" class="table-responsive"></div>
+          </div>
+        </div>
+
+        <!-- Klasemen -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            <h5 class="card-title">Klasemen Sementara</h5>
+            <div class="table-responsive">
+              <table
+                class="table table-bordered table-hover"
+                id="standingsTable"
+              >
+                <thead class="table-dark">
+                  <tr>
+                    <th>#</th>
+                    <th>Tim</th>
+                    <th>Match (W-L)</th>
+                    <th>Game (W-L)</th>
+                    <th>Diff</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Playoff Section -->
+        <div class="card shadow-sm mt-4">
+          <div class="card-body">
+            <h5 class="card-title">Playoffs Bracket</h5>
+            <button class="btn btn-primary" onclick="generatePlayoffBracket()">
+              🔄 Generate Bracket (setelah semua match selesai)
+            </button>
+            <div id="playoffContainer" class="mt-3"></div>
+          </div>
+        </div>
+
+        <button
+          class="btn btn-outline-primary mt-3 w-100"
+          onclick="backToSetup()"
+        >
+          ↩️ Kembali ke Setup
+        </button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
